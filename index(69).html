@@ -1,0 +1,983 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IA Pure — Assistente Inteligente</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI',Arial,sans-serif; }
+  body { background:#0B1020; color:#E2E8F0; height:100vh; display:flex; flex-direction:column; overflow:hidden; }
+  header { display:flex; align-items:center; gap:12px; padding:12px 18px; background:rgba(15,23,42,.7); border-bottom:1px solid rgba(255,255,255,.06); backdrop-filter:blur(10px); }
+  header svg { width:36px; height:36px; flex-shrink:0; }
+  header h1 { font-size:18px; letter-spacing:2px; }
+  header h1 span { background:linear-gradient(90deg,#8B5CF6,#22D3EE); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  #menu, #pro { border:none; border-radius:10px; cursor:pointer; font-size:15px; }
+  #menu { background:rgba(255,255,255,.06); color:#E2E8F0; padding:8px 11px; }
+  #pro { margin-left:auto; padding:7px 13px; background:linear-gradient(135deg,#F59E0B,#EF4444); color:#fff; text-decoration:none; font-size:12px; font-weight:700; }
+  #main { flex:1; display:flex; overflow:hidden; position:relative; }
+  #sidebar { width:250px; background:#0D1326; border-right:1px solid rgba(255,255,255,.06); display:none; flex-direction:column; }
+  #sidebar.open { display:flex; position:absolute; z-index:30; height:100%; box-shadow:0 0 40px rgba(0,0,0,.6); }
+  @media(min-width:900px){ #sidebar.open { position:static; box-shadow:none; } }
+  #sidebar .top { padding:12px; border-bottom:1px solid rgba(255,255,255,.06); }
+  #novo { width:100%; padding:9px; background:linear-gradient(135deg,#8B5CF6,#22D3EE); border:none; color:#fff; border-radius:10px; font-size:13px; cursor:pointer; }
+  #lista { flex:1; overflow-y:auto; padding:8px; }
+  .conv { display:flex; justify-content:space-between; align-items:center; padding:9px 11px; border-radius:9px; cursor:pointer; font-size:13px; color:rgba(255,255,255,.7); margin-bottom:2px; }
+  .conv:hover { background:rgba(255,255,255,.05); }
+  .conv.ativa { background:rgba(139,92,246,.18); color:#fff; }
+  .conv .del { opacity:.35; border:none; background:none; color:#fff; cursor:pointer; }
+  .conv .del:hover { opacity:1; color:#F87171; }
+  #sidefoot { padding:12px; border-top:1px solid rgba(255,255,255,.06); }
+  #sidefoot p { font-size:11px; color:rgba(255,255,255,.4); margin-bottom:8px; }
+  .pchip { display:block; width:100%; text-align:left; margin-bottom:4px; padding:7px 10px; border-radius:9px; background:transparent; border:1px solid rgba(255,255,255,.08); color:rgba(255,255,255,.7); font-size:12px; cursor:pointer; }
+  .pchip.on { background:rgba(139,92,246,.25); border-color:rgba(139,92,246,.5); color:#fff; }
+  #chat { flex:1; overflow-y:auto; padding:22px 24px; display:flex; flex-direction:column; gap:12px; max-width:820px; width:100%; margin:0 auto; }
+  .msg { max-width:80%; padding:13px 17px; border-radius:18px; line-height:1.55; white-space:pre-wrap; animation:pop .25s ease; }
+  @keyframes pop { from {opacity:0; transform:translateY(8px);} to {opacity:1;} }
+  .user { align-self:flex-end; background:linear-gradient(135deg,#8B5CF6,#6366F1); border-bottom-right-radius:5px; }
+  .bot { align-self:flex-start; background:#1A2140; border:1px solid rgba(255,255,255,.07); border-bottom-left-radius:5px; }
+  .typing { color:#22D3EE; }
+  .acoes { display:flex; gap:6px; align-self:flex-start; opacity:.55; }
+  .acoes:hover { opacity:1; }
+  .mini { padding:3px 9px; font-size:11px; background:transparent; color:rgba(255,255,255,.6); border:1px solid rgba(255,255,255,.12); border-radius:10px; cursor:pointer; }
+  .mini:hover { background:rgba(255,255,255,.1); color:#fff; }
+  .imgbox { align-self:flex-start; max-width:80%; animation:pop .25s ease; }
+  .imgbox img { width:100%; border-radius:16px; border:1px solid rgba(255,255,255,.1); display:block; }
+  .imgbox .caption { font-size:11px; color:rgba(255,255,255,.4); margin-top:5px; padding:0 4px; }
+  .imgbox .prog { background:#1A2140; border:1px solid rgba(255,255,255,.07); border-radius:16px; padding:14px 16px; color:#22D3EE; }
+  .btn { padding:7px 12px; background:rgba(255,255,255,.06); color:#E2E8F0; border:1px solid rgba(255,255,255,.12); border-radius:14px; font-size:11px; cursor:pointer; }
+  .btn:hover { background:rgba(255,255,255,.12); }
+  .btn.retry { background:linear-gradient(135deg,#8B5CF6,#22D3EE); border:none; color:#fff; }
+  .acts { display:flex; gap:6px; margin-top:7px; }
+  #estilos { display:none; gap:6px; padding:0 24px 10px; max-width:820px; width:100%; margin:0 auto; align-items:center; flex-wrap:wrap; }
+  #estilos.open { display:flex; }
+  #estilos span { font-size:11px; color:rgba(255,255,255,.4); }
+  .chip { padding:5px 12px; border-radius:14px; background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.1); color:rgba(255,255,255,.7); font-size:11px; cursor:pointer; }
+  .chip.on { background:linear-gradient(135deg,#8B5CF6,#22D3EE); border:none; color:#fff; }
+  #inputbar { display:flex; gap:8px; padding:10px 24px 18px; max-width:820px; width:100%; margin:0 auto; align-items:center; }
+  #input { flex:1; background:#1A2140; border:1px solid rgba(255,255,255,.1); border-radius:26px; padding:13px 20px; color:#E2E8F0; font-size:15px; outline:none; }
+  #input:focus { border-color:#22D3EE; box-shadow:0 0 0 3px rgba(34,211,238,.12); }
+  #send, #tglstyle, #mic, #autofalar { width:48px; height:48px; border:none; border-radius:50%; cursor:pointer; font-size:18px; flex-shrink:0; }
+  #send { background:linear-gradient(135deg,#8B5CF6,#22D3EE); color:#fff; transition:transform .15s; }
+  #send:hover { transform:scale(1.07); }
+  #send:disabled { opacity:.5; transform:none; }
+  #tglstyle { background:rgba(255,255,255,.06); color:#E2E8F0; }
+  #tglstyle.on, #mic.on, #autofalar.on { background:rgba(139,92,246,.3); border:1px solid rgba(139,92,246,.5); }
+  #lock { position:fixed; inset:0; background:#0B1020; z-index:100; display:none; align-items:center; justify-content:center; flex-direction:column; gap:12px; padding:20px; }
+  #lock h2 { font-size:24px; letter-spacing:2px; }
+  #lock h2 span { background:linear-gradient(90deg,#8B5CF6,#22D3EE); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  #lock .sub { color:rgba(255,255,255,.5); font-size:13px; margin-bottom:6px; }
+  #lock input { width:100%; max-width:300px; padding:12px 18px; border-radius:24px; border:1px solid rgba(255,255,255,.15); background:#1A2140; color:#fff; font-size:15px; outline:none; text-align:center; }
+  .authbtn { width:100%; max-width:300px; padding:12px; border:none; border-radius:24px; font-size:14px; cursor:pointer; color:#fff; display:flex; align-items:center; justify-content:center; gap:10px; }
+  #ebtn { background:linear-gradient(135deg,#8B5CF6,#22D3EE); }
+  #gbtn { background:#fff; color:#1f2937; font-weight:600; }
+  #abtn { background:#000; border:1px solid rgba(255,255,255,.25); }
+  .divider { display:flex; align-items:center; gap:10px; color:rgba(255,255,255,.35); font-size:12px; width:100%; max-width:300px; }
+  .divider::before, .divider::after { content:''; flex:1; height:1px; background:rgba(255,255,255,.12); }
+  .switch { font-size:12px; color:rgba(255,255,255,.5); }
+  .switch a { color:#22D3EE; cursor:pointer; text-decoration:none; }
+  #autherr { color:#F87171; font-size:12px; max-width:300px; text-align:center; }
+  #setup { position:fixed; inset:0; background:#0B1020; z-index:90; display:none; align-items:center; justify-content:center; flex-direction:column; gap:12px; padding:20px; }
+  #setup h2 { font-size:22px; letter-spacing:2px; }
+  #setup .sub { color:rgba(255,255,255,.5); font-size:13px; max-width:330px; text-align:center; line-height:1.5; }
+  #fbconfig { width:100%; max-width:340px; height:130px; padding:12px 16px; border-radius:16px; border:1px solid rgba(255,255,255,.15); background:#1A2140; color:#fff; font-size:12px; font-family:monospace; outline:none; resize:none; }
+  #setuperr { color:#F87171; font-size:12px; max-width:320px; text-align:center; }
+  #cfglogin { margin-top:8px; width:100%; text-align:center; background:none; border:none; color:rgba(255,255,255,.4); font-size:11px; cursor:pointer; }
+  #cfglogin:hover { color:#22D3EE; }
+  #userinfo { font-size:11px; color:rgba(255,255,255,.45); margin-top:8px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  #proscreen { position:fixed; inset:0; background:rgba(11,16,32,.98); z-index:95; display:none; align-items:center; justify-content:center; flex-direction:column; gap:10px; padding:20px; }
+  #proscreen h2 { font-size:24px; letter-spacing:2px; }
+  #proscreen h2 span { background:linear-gradient(90deg,#8B5CF6,#22D3EE); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .beneficios { background:#1A2140; border:1px solid rgba(255,255,255,.08); border-radius:14px; padding:12px 20px; width:100%; max-width:300px; }
+  .beneficios p { font-size:13px; color:rgba(255,255,255,.85); margin:6px 0; }
+  .preco { font-size:24px; font-weight:800; color:#fff; }
+  .preco span { font-size:12px; color:rgba(255,255,255,.45); font-weight:400; }
+  .pixbox { background:#1A2140; border:1px dashed rgba(34,211,238,.4); border-radius:12px; padding:10px 14px; width:100%; max-width:300px; font-family:monospace; font-size:11px; color:#22D3EE; word-break:break-all; text-align:center; }
+  #proerr { color:#F87171; font-size:12px; max-width:300px; text-align:center; }
+</style>
+</head>
+<body>
+<div id="lock">
+  <h2>⚛️ IA <span>PURE</span></h2>
+  <p class="sub">Entre para continuar</p>
+  <button id="gbtn" class="authbtn"><svg width="18" height="18" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.1H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3l5.7-5.7C34.3 6.1 29.4 4 24 4 13 4 4 13 4 24s9 20 20 20 20-9 20-20c0-1.3-.1-2.7-.4-3.9z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.9 1.2 8 3l5.7-5.7C34.3 6.1 29.4 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.1H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C36.9 39.2 44 34 44 24c0-1.3-.1-2.7-.4-3.9z"/></svg> Continuar com Google</button>
+  <button id="abtn" class="authbtn"><svg width="18" height="18" viewBox="0 0 384 512"><path fill="#fff" d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z"/></svg> Continuar com Apple</button>
+  <div class="divider">ou com e-mail</div>
+  <input id="email" type="email" placeholder="Seu e-mail" autocomplete="off">
+  <input id="pass" type="password" placeholder="Sua senha">
+  <button id="ebtn" class="authbtn">Entrar</button>
+  <p class="switch">Não tem conta? <a id="togglecad">Criar conta</a></p>
+  <a id="skip" class="switch" style="cursor:pointer;opacity:.6">→ entrar sem conta</a>
+  <p id="autherr"></p>
+</div>
+<div id="setup">
+  <h2>⚙️ Configurar Login</h2>
+  <p class="sub">Cole aqui o bloco <b>firebaseConfig</b> copiado no Firebase Console (engrenagem ⚙️ → Configurações do projeto → ícone Web &lt;/&gt;). Não criou ainda? Toque em "Pular".</p>
+  <textarea id="fbconfig" placeholder='{"apiKey": "...", "authDomain": "...", "projectId": "...", "appId": "..."}'></textarea>
+  <button id="ativar" class="authbtn" style="background:linear-gradient(135deg,#8B5CF6,#22D3EE)">🔐 Ativar login</button>
+  <a id="pular" class="switch" style="cursor:pointer">Pular por enquanto</a>
+  <p id="setuperr"></p>
+</div>
+<div id="proscreen">
+  <h2>⭐ IA <span>PURE</span> PRO</h2>
+  <p class="sub">Desbloqueie o modo expert e a criação de jogos!</p>
+  <div class="beneficios">
+    <p>🧠 Modo Pro (Expert)</p>
+    <p>🎮 Crie jogos jogáveis com /jogo</p>
+    <p>🖼️ Imagens sem limite diário</p>
+    <p>⚡ Respostas mais detalhadas</p>
+    <p>🔁 Renove todo mês e mantenha o Pro</p>
+  </div>
+  <p class="preco" id="propreco">R$ 4,99 <span>por mês</span></p>
+  <p class="switch" id="provalidade" style="color:#22D3EE"></p>
+  <p class="sub">Pague com <b>Pix</b> e receba o código de ativação:</p>
+  <div class="pixbox" id="pixbox">sua-chave-pix-aqui</div>
+  <button id="pagarplay" class="authbtn" style="background:#4285F4">💳 Pagar com Google Play</button>
+  <button id="copiarpix" class="authbtn" style="background:#22C55E">📋 Copiar código Pix</button>
+  <input id="codigoin" type="text" placeholder="Digite o código recebido" autocomplete="off">
+  <button id="jaPaguei" class="authbtn" style="background:linear-gradient(135deg,#8B5CF6,#22D3EE)">🔓 Ativar código</button>
+  <button id="fecharpro" class="authbtn" style="background:rgba(255,255,255,.08)">Fechar</button>
+  <p class="switch" style="opacity:.6">Google Play disponível quando o app publicar na loja. Por enquanto: pague no Pix e receba o código por mensagem.</p>
+  <p id="proerr"></p>
+</div>
+<header>
+  <button id="menu">☰</button>
+  <svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="lg1" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#8B5CF6"/><stop offset="55%" stop-color="#6366F1"/><stop offset="100%" stop-color="#22D3EE"/>
+      </linearGradient>
+      <filter id="lg2" x="-60%" y="-60%" width="220%" height="220%">
+        <feGaussianBlur stdDeviation="9" result="b"/>
+        <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+      </filter>
+    </defs>
+    <ellipse cx="256" cy="256" rx="216" ry="84" fill="none" stroke="rgba(139,92,246,.7)" stroke-width="11" transform="rotate(0 256 256)"/>
+    <ellipse cx="256" cy="256" rx="216" ry="84" fill="none" stroke="rgba(139,92,246,.7)" stroke-width="11" transform="rotate(60 256 256)"/>
+    <ellipse cx="256" cy="256" rx="216" ry="84" fill="none" stroke="rgba(139,92,246,.7)" stroke-width="11" transform="rotate(-60 256 256)"/>
+    <circle cx="472" cy="256" r="20" fill="#22D3EE" filter="url(#lg2)"/>
+    <circle cx="364" cy="443" r="20" fill="#22D3EE" filter="url(#lg2)"/>
+    <circle cx="148" cy="443" r="20" fill="#22D3EE" filter="url(#lg2)"/>
+    <circle cx="256" cy="256" r="46" fill="url(#lg1)" filter="url(#lg2)"/>
+  </svg>
+  <h1>IA <span>PURE</span></h1>
+  <a id="pro" href="#" target="_blank">⭐ Pro</a>
+</header>
+<div id="main">
+  <div id="sidebar">
+    <div class="top"><button id="novo">＋ Nova conversa</button><p id="userinfo"></p></div>
+    <div id="lista"></div>
+    <div id="sidefoot">
+      <button id="cfglogin">🔐 Configurar login</button>
+      <p>MODO DA IA</p>
+      <button class="pchip" data-p="normal">🙂 Normal</button>
+      <button class="pchip" data-p="professor">📚 Professor</button>
+      <button class="pchip" data-p="engracada">😂 Engraçada</button>
+      <button class="pchip" data-p="programadora">💻 Programadora</button>
+      <button class="pchip" data-p="pro">⭐ Pro (Expert)</button>
+      <button class="pchip" id="modoBurra">📴 IA Burrinha (offline): OFF</button>
+    </div>
+  </div>
+  <div id="chat"></div>
+</div>
+<div id="estilos">
+  <span>Estilo:</span>
+  <button class="chip on" data-s="">Nenhum</button>
+  <button class="chip" data-s="realista">Realista</button>
+  <button class="chip" data-s="anime">Anime</button>
+  <button class="chip" data-s="3d">3D</button>
+  <button class="chip" data-s="aquarela">Aquarela</button>
+</div>
+<div id="inputbar">
+  <input id="input" placeholder="Pergunte, /imagine uma imagem ou /jogo (Pro)..." autocomplete="off">
+  <button id="tglstyle" title="Estilos de imagem">🎨</button>
+  <button id="mic" title="Falar com a IA">🎤</button>
+  <button id="autofalar" title="Ler respostas em voz alta">🔊</button>
+  <button id="send" title="Enviar">➤</button>
+</div>
+<script async src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script async src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script>
+// ================= CONFIG =================
+const CONFIG = {
+  SENHA: '',              // senha simples (só se NÃO usar Firebase)
+  SENHA_PRO: 'iapurepro', // código que desbloqueia o modo Pro
+  PIX_CHAVE: 'sua-chave-pix-aqui',  // <-- coloque a chave Pix aqui (CPF, e-mail ou copia-e-cola)
+  PRECO_PRO: 'R$ 4,99/mês',         // preço exibido na tela de compra (mensalidade)
+  LIMITE_IMAGENS_DIA: 15,
+  LINK_PRO: 'https://exemplo.com/pagamento',
+  FIREBASE: {             // chaves do projeto IA-pure (Firebase)
+    apiKey: 'AIzaSyAxXuwhXhErr0F7B7mUIb-W_Na2vajyqFk',
+    authDomain: 'ia-pure.firebaseapp.com',
+    projectId: 'ia-pure',
+    appId: '1:542051006226:web:a7c77f0220c84d2e3d25cb'
+  }
+};
+// ==========================================
+
+// recupera chaves Firebase salvas na tela de configuração
+let fbSalvo = null;
+try { fbSalvo = JSON.parse(localStorage.getItem('iapure_fb') || 'null'); } catch(e) {}
+if (fbSalvo && fbSalvo.apiKey) CONFIG.FIREBASE = fbSalvo;
+
+// Firebase não roda fora de http/https (ex: arquivo aberto do WhatsApp)
+if (!['http:', 'https:'].includes(window.location.protocol)) {
+  CONFIG.FIREBASE = { apiKey: '', authDomain: '', projectId: '', appId: '' };
+}
+
+document.getElementById('pro').href = '#';
+document.getElementById('pixbox').textContent = CONFIG.PIX_CHAVE;
+document.getElementById('propreco').innerHTML = CONFIG.PRECO_PRO + ' <span>por mês</span>';
+if (PRO) {
+  const d = new Date(proAte());
+  const pv = document.getElementById('provalidade');
+  if (pv) pv.textContent = '⭐ Assinatura ativa até ' + d.toLocaleDateString('pt-BR');
+}
+document.getElementById('pro').onclick = function(e) {
+  e.preventDefault();
+  PRO = proAte() > Date.now();
+  if (PRO) {
+    const d = new Date(proAte());
+    addMsg('⭐ Você já é Pro! Sua assinatura vai até ' + d.toLocaleDateString('pt-BR') + '. Renove pelo botão quando quiser.', 'bot');
+    return;
+  }
+  document.getElementById('proerr').textContent = '';
+  document.getElementById('proscreen').style.display = 'flex';
+};
+function ativarPro() {
+  const codigo = prompt('Digite o código de ativação (recebido após o pagamento):');
+  if (codigo !== null) validarCodigo(codigo.trim());
+}
+function validarCodigo(codigo) {
+  if (codigo === CONFIG.SENHA_PRO) {
+    const base = Math.max(proAte(), Date.now());
+    const ate = base + 30 * 24 * 60 * 60 * 1000;
+    localStorage.setItem('iapure_pro_ate', String(ate));
+    PRO = true;
+    document.getElementById('proscreen').style.display = 'none';
+    const d = new Date(ate);
+    addMsg('⭐ PRO ATIVADO até ' + d.toLocaleDateString('pt-BR') + '! Modo expert e /jogo liberados. Renove todo mês! 🎮', 'bot');
+  } else {
+    document.getElementById('proerr').textContent = '❌ Código errado. Confere se digitou direitinho!';
+  }
+}
+document.getElementById('jaPaguei').onclick = function() {
+  const v = (document.getElementById('codigoin').value || '').trim();
+  if (v) validarCodigo(v);
+  else document.getElementById('proerr').textContent = 'Digita o código recebido no campo acima!';
+};
+document.getElementById('codigoin').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('jaPaguei').click(); });
+document.getElementById('fecharpro').onclick = function() { document.getElementById('proscreen').style.display = 'none'; };
+document.getElementById('pagarplay').onclick = function() {
+  document.getElementById('proerr').innerHTML = '💳 <b>Google Play:</b> disponível quando o IA Pure publicar na Play Store! O pagamento será processado pela loja e cai direto na conta do desenvolvedor. Por enquanto, use o Pix abaixo. 🟢';
+};
+document.getElementById('copiarpix').onclick = function() {
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(CONFIG.PIX_CHAVE).then(() => {
+      this.textContent = '✅ Copiado!';
+      setTimeout(() => { this.textContent = '📋 Copiar código Pix'; }, 1500);
+    });
+  }
+};
+
+document.getElementById('ativar').onclick = function() {
+  let raw = document.getElementById('fbconfig').value.trim();
+  try {
+    const ini = raw.indexOf('{');
+    const fim = raw.lastIndexOf('}');
+    if (ini < 0 || fim < 0) throw 0;
+    const j = JSON.parse(raw.slice(ini, fim + 1));
+    if (!j.apiKey) throw 0;
+    localStorage.setItem('iapure_fb', JSON.stringify({
+      apiKey: j.apiKey,
+      authDomain: j.authDomain || '',
+      projectId: j.projectId || '',
+      appId: j.appId || ''
+    }));
+    location.reload();
+  } catch(e) {
+    document.getElementById('setuperr').textContent = 'Cole o bloco firebaseConfig inteiro, com { } e aspas.';
+  }
+};
+document.getElementById('pular').onclick = function() {
+  localStorage.setItem('iapure_setup', '1');
+  document.getElementById('setup').style.display = 'none';
+};
+document.getElementById('cfglogin').onclick = function() {
+  if (CONFIG.FIREBASE.apiKey) {
+    if (confirm('Trocar as chaves do Firebase? Você será deslogado.')) {
+      localStorage.removeItem('iapure_fb');
+      localStorage.removeItem('iapure_setup');
+      location.reload();
+    }
+  } else {
+    document.getElementById('setup').style.display = 'flex';
+  }
+};
+
+let fbTentativas = 0;
+function initFirebase() {
+  if (typeof firebase === 'undefined') {
+    if (++fbTentativas > 40) return; // desiste após 20s (ex: APK offline)
+    setTimeout(initFirebase, 500);
+    return;
+  }
+  if (!CONFIG.FIREBASE.apiKey) return;
+  document.getElementById('lock').style.display = 'flex';
+  firebase.initializeApp(CONFIG.FIREBASE);
+  const auth = firebase.auth();
+  let cadastro = false;
+  const err = m => { document.getElementById('autherr').textContent = m; };
+  document.getElementById('togglecad').onclick = function() {
+    cadastro = !cadastro;
+    document.getElementById('ebtn').textContent = cadastro ? 'Criar conta' : 'Entrar';
+    this.textContent = cadastro ? 'Já tem conta? Entrar' : 'Criar conta';
+  };
+  // redirecionamento (funciona no navegador E dentro de WebView/APK — popup é bloqueado em APK)
+  document.getElementById('gbtn').onclick = function() {
+    auth.signInWithRedirect(new firebase.auth.GoogleAuthProvider());
+  };
+  document.getElementById('abtn').onclick = function() {
+    auth.signInWithRedirect(new firebase.auth.OAuthProvider('apple.com'));
+  };
+  document.getElementById('ebtn').onclick = function() {
+    const em = document.getElementById('email').value.trim();
+    const pw = document.getElementById('pass').value;
+    err('');
+    if (!em || !pw) { err('Preencha e-mail e senha.'); return; }
+    const p = cadastro
+      ? auth.createUserWithEmailAndPassword(em, pw)
+      : auth.signInWithEmailAndPassword(em, pw);
+    p.catch(e => err(e.message));
+  };
+  auth.getRedirectResult().catch(function(e) {
+    if (e && e.code && e.code.indexOf('popup') < 0) err(e.message);
+  });
+  auth.onAuthStateChanged(function(u) {
+    if (u) {
+      document.getElementById('lock').style.display = 'none';
+      document.getElementById('userinfo').textContent = u.isAnonymous ? '👤 Convidado' : '👤 ' + (u.email || u.displayName || '');
+    } else {
+      document.getElementById('lock').style.display = 'flex';
+    }
+  });
+  // "entrar sem conta": login anônimo no Firebase (provedor Anônimo precisa estar ativado)
+  document.getElementById('skip').onclick = function() {
+    auth.signInAnonymously().catch(function(e) {
+      if (e.code === 'auth/operation-not-allowed') {
+        err('⚠️ Ative o provedor "Anônimo": Firebase → Authentication → Sign-in method → Anônimo.');
+      } else if (e.code === 'auth/operation-not-supported-in-this-environment') {
+        // ambiente sem suporte (arquivo local): entra como convidado local
+        document.getElementById('lock').style.display = 'none';
+        document.getElementById('userinfo').textContent = '👤 Convidado';
+      } else { err(e.message); }
+    });
+  };
+}
+if (CONFIG.SENHA) {
+  document.getElementById('lock').style.display = 'flex';
+  document.getElementById('lock').innerHTML =
+    '<h2>⚛️ IA Pure</h2><p class="sub">Digite a senha para entrar</p>' +
+    '<input id="senha2" type="password" placeholder="Senha"><button id="entrar2" class="authbtn" style="background:linear-gradient(135deg,#8B5CF6,#22D3EE)">Entrar</button>';
+  document.getElementById('entrar2').onclick = function() {
+    if (document.getElementById('senha2').value === CONFIG.SENHA) {
+      document.getElementById('lock').style.display = 'none';
+    } else { alert('Senha errada!'); }
+  };
+}
+
+initFirebase();
+
+// sem chaves Firebase: mostra a tela de login com aviso + opção de pular
+if (!CONFIG.FIREBASE.apiKey && !CONFIG.SENHA) {
+  document.getElementById('lock').style.display = 'flex';
+  ['gbtn','abtn','ebtn'].forEach(function(id) {
+    document.getElementById(id).onclick = function() {
+      document.getElementById('autherr').textContent = '⚠️ Login com conta só funciona pelo site publicado (link https). Aqui você pode usar "entrar sem conta" embaixo.';
+    };
+  });
+}
+document.getElementById('skip').onclick = function() {
+  if (CONFIG.FIREBASE.apiKey) return; // com login ativo, não deixa furar
+  localStorage.setItem('iapure_setup', '1');
+  document.getElementById('lock').style.display = 'none';
+};
+
+const SYSTEMS = {
+  normal: 'Você é a IA Pure, um assistente de inteligência artificial brasileiro. Responda em português, de forma clara, amigável e útil. Seja direto, mas completo.',
+  professor: 'Você é a IA Pure no modo Professor: explique tudo como um professor paciente e didático. Use exemplos simples, analogias do dia a dia, e estruture a resposta passo a passo. Responda em português.',
+  engracada: 'Você é a IA Pure no modo Engraçada: responda com bom humor, piadas leves, trocadilhos e emojis, mas sempre respondendo direito a pergunta. Responda em português.',
+  programadora: 'Você é a IA Pure no modo Programadora: especialista em código. Responda com exemplos de código, boas práticas e explicações técnicas. Responda em português.',
+  pro: 'Você é a IA Pure PRO, a versão EXPERT. Especialista em programação, criação de jogos e projetos completos. Responda com máxima profundidade técnica, seja detalhista, didático e entregue soluções completas e funcionais. Responda em português.'
+};
+
+const ESTILOS = {
+  '': '',
+  'realista': 'photorealistic, 8k, professional photography, sharp focus',
+  'anime': 'anime style, vibrant colors, detailed illustration',
+  '3d': '3D render, pixar style, octane render, soft lighting',
+  'aquarela': 'watercolor painting, soft colors, artistic, paper texture'
+};
+
+const chat = document.getElementById('chat');
+const input = document.getElementById('input');
+const sendBtn = document.getElementById('send');
+const API = 'https://text.pollinations.ai/openai';
+let btnFalando = null;
+let estiloSel = '';
+function proAte() { return parseInt(localStorage.getItem('iapure_pro_ate') || '0'); }
+let PRO = proAte() > Date.now();
+
+let chats = {};
+try { chats = JSON.parse(localStorage.getItem('iapure_chats') || '{}'); } catch(e) {}
+let ativo = localStorage.getItem('iapure_ativo');
+if (!ativo || !chats[ativo]) {
+  ativo = 'c' + Date.now();
+  chats[ativo] = { title:'Nova conversa', persona:'normal', msgs:[{role:'system',content:SYSTEMS.normal}] };
+}
+let msgs = chats[ativo].msgs;
+
+function salvar() {
+  try {
+    const ids = Object.keys(chats);
+    if (ids.length > 30) {
+      ids.slice(0, ids.length - 30).forEach(id => { if (id !== ativo) delete chats[id]; });
+    }
+    localStorage.setItem('iapure_chats', JSON.stringify(chats));
+    localStorage.setItem('iapure_ativo', ativo);
+  } catch(e) {}
+}
+
+function renderLista() {
+  const lista = document.getElementById('lista');
+  lista.innerHTML = '';
+  Object.keys(chats).forEach(id => {
+    const row = document.createElement('div');
+    row.className = 'conv' + (id === ativo ? ' ativa' : '');
+    const tit = document.createElement('span');
+    tit.textContent = chats[id].title;
+    tit.style.cssText = 'overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
+    const del = document.createElement('button');
+    del.className = 'del'; del.textContent = '✕';
+    del.onclick = function(ev) {
+      ev.stopPropagation();
+      if (!confirm('Apagar esta conversa?')) return;
+      delete chats[id];
+      if (id === ativo) {
+        const resto = Object.keys(chats);
+        if (resto.length) { trocar(resto[0]); }
+        else {
+          ativo = 'c' + Date.now();
+          chats[ativo] = { title:'Nova conversa', persona:'normal', msgs:[{role:'system',content:SYSTEMS.normal}] };
+          msgs = chats[ativo].msgs; renderChat();
+        }
+        renderLista();
+      }
+      salvar(); renderLista();
+    };
+    row.appendChild(tit); row.appendChild(del);
+    row.onclick = () => trocar(id);
+    lista.appendChild(row);
+  });
+}
+
+function trocar(id) {
+  ativo = id;
+  msgs = chats[id].msgs;
+  salvar(); renderChat(); renderLista(); renderPersona();
+  if (window.innerWidth < 900) document.getElementById('sidebar').classList.remove('open');
+}
+
+document.getElementById('novo').onclick = function() {
+  const id = 'c' + Date.now();
+  chats[id] = { title:'Nova conversa', persona:'normal', msgs:[{role:'system',content:SYSTEMS.normal}] };
+  trocar(id);
+};
+
+document.getElementById('menu').onclick = function() {
+  document.getElementById('sidebar').classList.toggle('open');
+};
+
+function renderPersona() {
+  const p = chats[ativo].persona || 'normal';
+  document.querySelectorAll('.pchip').forEach(c => {
+    if (!c.dataset.p) return;
+    c.classList.toggle('on', c.dataset.p === p);
+  });
+}
+document.querySelectorAll('.pchip').forEach(c => {
+  c.onclick = function() {
+    if (!this.dataset.p) return; // chips sem personalidade (ex: IA Burrinha) têm handler próprio
+    if (this.dataset.p === 'pro' && !PRO) {
+      addMsg('⭐ O Modo Pro é exclusivo! Toque no botão ⭐ Pro (no topo) e digite o código de ativação.', 'bot');
+      return;
+    }
+    chats[ativo].persona = this.dataset.p;
+    msgs[0].content = SYSTEMS[this.dataset.p];
+    salvar(); renderPersona();
+  };
+});
+
+document.getElementById('tglstyle').onclick = function() {
+  document.getElementById('estilos').classList.toggle('open');
+  this.classList.toggle('on');
+};
+
+document.querySelectorAll('#estilos .chip').forEach(c => {
+  c.onclick = function() {
+    estiloSel = this.dataset.s;
+    document.querySelectorAll('#estilos .chip').forEach(x => x.classList.toggle('on', x === this));
+  };
+});
+
+function falar(texto, btn) {
+  if (btnFalando === btn && speechSynthesis.speaking) {
+    speechSynthesis.cancel();
+    btn.textContent = '🔊';
+    btnFalando = null;
+    return;
+  }
+  speechSynthesis.cancel();
+  if (btnFalando) btnFalando.textContent = '🔊';
+  const u = new SpeechSynthesisUtterance(texto);
+  u.lang = 'pt-BR'; u.rate = 1.05;
+  u.onend = function() { btn.textContent = '🔊'; if (btnFalando === btn) btnFalando = null; };
+  u.onerror = u.onend;
+  btn.textContent = '⏹';
+  btnFalando = btn;
+  speechSynthesis.speak(u);
+}
+
+function copiar(texto, btn) {
+  const ok = function() {
+    btn.textContent = '✓';
+    setTimeout(() => { btn.textContent = '📋'; }, 1500);
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(texto).then(ok).catch(() => copiarFallback(texto, ok));
+  } else {
+    copiarFallback(texto, ok);
+  }
+}
+function copiarFallback(texto, ok) {
+  try {
+    const ta = document.createElement('textarea');
+    ta.value = texto;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    ok();
+  } catch(e) {}
+}
+
+function addMsg(texto, quem) {
+  const div = document.createElement('div');
+  div.className = 'msg ' + quem;
+  div.textContent = texto;
+  chat.appendChild(div);
+  if (quem === 'bot') {
+    const ac = document.createElement('div');
+    ac.className = 'acoes';
+    const sp = document.createElement('button');
+    sp.className = 'mini'; sp.textContent = '🔊'; sp.title = 'Ouvir';
+    sp.onclick = () => falar(texto, sp);
+    const cp = document.createElement('button');
+    cp.className = 'mini'; cp.textContent = '📋'; cp.title = 'Copiar';
+    cp.onclick = () => copiar(texto, cp);
+    ac.appendChild(sp); ac.appendChild(cp);
+    chat.appendChild(ac);
+    if (typeof autoFalar !== 'undefined' && autoFalar) falar(texto, sp);
+  }
+  chat.scrollTop = chat.scrollHeight;
+  return div;
+}
+
+function renderChat() {
+  chat.innerHTML = '';
+  let vazio = true;
+  msgs.forEach(m => {
+    if (m.role !== 'system') { addMsg(m.content, m.role === 'user' ? 'user' : 'bot'); vazio = false; }
+  });
+  if (vazio) addMsg('Olá! Eu sou a IA Pure ⚛️\n• Pergunte qualquer coisa\n• /imagine uma imagem\n• /jogo um jogo (Pro)\n• 🎤 fale comigo por voz\n• 📴 modo offline no menu ☰', 'bot');
+}
+
+async function fetchComTimeout(url, opts, ms) {
+  const ctrl = new AbortController();
+  const to = setTimeout(() => ctrl.abort(), ms || 45000);
+  try {
+    return await fetch(url, Object.assign({}, opts, { signal: ctrl.signal }));
+  } finally {
+    clearTimeout(to);
+  }
+}
+
+async function textoNormal(texto) {
+  const aguarde = addMsg('IA Pure está pensando...', 'bot typing');
+  msgs.push({ role:'user', content:texto });
+  if (chats[ativo].title === 'Nova conversa') { chats[ativo].title = texto.slice(0, 32); renderLista(); }
+  salvar();
+  const div = document.createElement('div');
+  div.className = 'msg bot';
+  let full = '';
+  try {
+    const resp = await fetchComTimeout(API, {
+      method:'POST', headers:{ 'Content-Type':'application/json' },
+      body: JSON.stringify({ model:'openai', messages: msgs, stream: true })
+    });
+    aguarde.remove();
+    const ct = resp.headers.get('content-type') || '';
+    if (resp.ok && ct.includes('event-stream')) {
+      chat.appendChild(div);
+      const reader = resp.body.getReader();
+      const dec = new TextDecoder();
+      let buf = '';
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += dec.decode(value, { stream:true });
+        const lines = buf.split('\n');
+        buf = lines.pop();
+        for (const line of lines) {
+          const t = line.trim();
+          if (!t.startsWith('data:')) continue;
+          const payload = t.slice(5).trim();
+          if (payload === '[DONE]') continue;
+          try {
+            const j = JSON.parse(payload);
+            const piece = j.choices?.[0]?.delta?.content || '';
+            if (piece) { full += piece; div.textContent = full; chat.scrollTop = chat.scrollHeight; }
+          } catch(e) {}
+        }
+      }
+    } else {
+      const r2 = await fetchComTimeout(API, {
+        method:'POST', headers:{ 'Content-Type':'application/json' },
+        body: JSON.stringify({ model:'openai', messages: msgs })
+      });
+      const dados = await r2.json();
+      full = dados.choices?.[0]?.message?.content || 'Desculpe, não consegui responder agora.';
+      div.textContent = full;
+      chat.appendChild(div);
+    }
+    if (!full) { full = 'Sem resposta.'; div.textContent = full; }
+    const ac = document.createElement('div');
+    ac.className = 'acoes';
+    const sp = document.createElement('button'); sp.className = 'mini'; sp.textContent = '🔊'; sp.title = 'Ouvir';
+    sp.onclick = () => falar(full, sp);
+    const cp = document.createElement('button'); cp.className = 'mini'; cp.textContent = '📋'; cp.title = 'Copiar';
+    cp.onclick = () => copiar(full, cp);
+    ac.appendChild(sp); ac.appendChild(cp);
+    chat.appendChild(ac);
+    chat.scrollTop = chat.scrollHeight;
+    if (autoFalar) falar(full, sp);
+    msgs.push({ role:'assistant', content: full });
+    salvar();
+  } catch (e) {
+    if (aguarde.parentNode) aguarde.remove();
+    addMsg(e.name === 'AbortError' ? '⏱️ A IA demorou demais pra responder. Toca de novo pra tentar!' : 'Erro de conexão. Verifique sua internet e tente novamente.', 'bot');
+  }
+}
+
+async function expandirPrompt(prompt) {
+  try {
+    const resp = await fetchComTimeout(API, {
+      method:'POST', headers:{ 'Content-Type':'application/json' },
+      body: JSON.stringify({
+        model:'openai',
+        messages: [
+          { role:'system', content:'You are a prompt engineer for AI image generation. Take the user short description and expand it into ONE detailed, vivid image prompt in English (max 60 words). Include subject, action, environment, lighting, colors, camera style. Output ONLY the final prompt, nothing else.' },
+          { role:'user', content: prompt }
+        ]
+      })
+    });
+    const dados = await resp.json();
+    return dados.choices?.[0]?.message?.content?.trim() || prompt;
+  } catch (e) { return prompt; }
+}
+
+async function baixarImagem(url) {
+  try {
+    const r = await fetch(url);
+    const b = await r.blob();
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(b);
+    a.download = 'ia-pure-' + Date.now() + '.png';
+    a.click();
+  } catch(e) { window.open(url, '_blank'); }
+}
+
+function gerarImagem(promptOriginal, promptDetalhado) {
+  const box = document.createElement('div');
+  box.className = 'imgbox';
+  box.innerHTML = '<div class="prog">🎨 Criando sua imagem...<br><small>' + promptOriginal + '</small></div>';
+  chat.appendChild(box);
+  chat.scrollTop = chat.scrollHeight;
+  const img = document.createElement('img');
+
+  function carregar() {
+    box.innerHTML = '';
+    const seed = Math.floor(Math.random() * 999999);
+    const url = 'https://image.pollinations.ai/prompt/' + encodeURIComponent(promptDetalhado) +
+                '?width=1024&height=1024&nologo=true&seed=' + seed;
+    img.onload = function() {
+      const dAgora = new Date(); const hoje = dAgora.getFullYear() + '-' + String(dAgora.getMonth()+1).padStart(2,'0') + '-' + String(dAgora.getDate()).padStart(2,'0');
+      const usos = parseInt(localStorage.getItem('iapure_uso_' + hoje) || '0') + 1;
+      localStorage.setItem('iapure_uso_' + hoje, usos);
+
+      box.appendChild(img);
+      const cap = document.createElement('div');
+      cap.className = 'caption';
+      cap.textContent = '🖼️ ' + promptOriginal;
+      box.appendChild(cap);
+      const acts = document.createElement('div');
+      acts.className = 'acts';
+      const btnDl = document.createElement('button');
+      btnDl.className = 'btn'; btnDl.textContent = '⬇ Salvar';
+      btnDl.onclick = () => baixarImagem(url);
+      const btnRt = document.createElement('button');
+      btnRt.className = 'btn retry'; btnRt.textContent = '🔄 De novo';
+      btnRt.onclick = function() { acts.remove(); carregar(); };
+      acts.appendChild(btnDl); acts.appendChild(btnRt);
+      box.appendChild(acts);
+      chat.scrollTop = chat.scrollHeight;
+    };
+    img.onerror = function() {
+      box.innerHTML = '<div class="prog">❌ Falhou. Espera uns segundos e tenta de novo.</div>';
+      const btn = document.createElement('button');
+      btn.className = 'btn retry'; btn.textContent = '🔄 Tentar novamente';
+      btn.onclick = function() { box.innerHTML = '<div class="prog">🎨 Tentando de novo...</div>'; setTimeout(carregar, 800); };
+      box.appendChild(btn);
+    };
+    img.src = url;
+  }
+  carregar();
+}
+
+async function criarJogo(pedido) {
+  try {
+    const resp = await fetchComTimeout(API, {
+      method:'POST', headers:{ 'Content-Type':'application/json' },
+      body: JSON.stringify({
+        model:'openai',
+        messages: [
+          { role:'system', content:'You are a game developer. Create ONE complete, playable HTML5 game as a SINGLE self-contained HTML file: inline CSS and JS, mobile-friendly with touch/click controls, NO external libraries, NO internet images (use shapes, colors and emoji). Keep it under 350 lines. It must run immediately when opened. Output ONLY the raw HTML code — no explanations, no markdown fences.' },
+          { role:'user', content: pedido }
+        ]
+      })
+    });
+    const dados = await resp.json();
+    let code = dados.choices?.[0]?.message?.content || '';
+    code = code.replace(/```html/gi, '').replace(/```/g, '').trim();
+    const ini = code.indexOf('<');
+    return ini >= 0 ? code.slice(ini) : null;
+  } catch(e) { return null; }
+}
+
+function mostrarJogo(pedido, code) {
+  const box = document.createElement('div');
+  box.className = 'imgbox';
+  if (!code) {
+    box.innerHTML = '<div class="prog">❌ Não consegui criar esse jogo. Tenta outra descrição!</div>';
+    chat.appendChild(box);
+    return;
+  }
+  const title = document.createElement('div');
+  title.className = 'caption';
+  title.textContent = '🎮 ' + pedido;
+  box.appendChild(title);
+  const frame = document.createElement('iframe');
+  frame.setAttribute('sandbox', 'allow-scripts');
+  frame.style.cssText = 'width:100%;height:min(60vh,480px);border:1px solid rgba(255,255,255,.12);border-radius:16px;background:#fff;';
+  box.appendChild(frame);
+  frame.srcdoc = code;
+  const acts = document.createElement('div');
+  acts.className = 'acts';
+  const dl = document.createElement('button');
+  dl.className = 'btn'; dl.textContent = '⬇️ Baixar jogo';
+  dl.onclick = function() {
+    const blob = new Blob([code], { type:'text/html' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'jogo-' + Date.now() + '.html';
+    a.click();
+  };
+  const rt = document.createElement('button');
+  rt.className = 'btn retry'; rt.textContent = '🔄 Refazer';
+  rt.onclick = function() { input.value = '/jogo ' + pedido; perguntar(); };
+  acts.appendChild(dl); acts.appendChild(rt);
+  box.appendChild(acts);
+  chat.appendChild(box);
+  chat.scrollTop = chat.scrollHeight;
+}
+
+// ===== IA BURRINHA (MODO OFFLINE) =====
+let modoBurro = false;
+document.getElementById('modoBurra').onclick = function() {
+  modoBurro = !modoBurro;
+  this.textContent = '📴 IA Burrinha (offline): ' + (modoBurro ? 'ON' : 'OFF');
+  this.classList.toggle('on', modoBurro);
+  addMsg(modoBurro
+    ? '📴 IA Burrinha NO COMANDO! Funciono sem internet! Sei contar piadas, fazer contas, jogar cara ou coroa e dados. Pode testar! 🐔'
+    : '🌐 Voltei pro modo inteligente (preciso de internet)!', 'bot');
+};
+window.addEventListener('offline', () => addMsg('📴 Ficou sem internet! A IA Burrinha assumiu — a gente continua conversando! 🐔', 'bot'));
+window.addEventListener('online', () => addMsg('🌐 Internet voltou! Cérebro grande de volta! ⚛️', 'bot'));
+
+const PIADAS = [
+  '📐 Por que o livro de matemática vive triste? Porque está cheio de problemas!',
+  '🦆 O que o pato disse para a pata? Vem quá!',
+  '🐊 Por que o jacaré tirou o filho da escola? Porque ele réptil de ano!',
+  '🖨️ O que uma impressora disse para a outra? Essa folha é sua ou é impressão minha?',
+  '💀 Por que o esqueleto não foi à briga? Porque ele não tem coragem!',
+  '8️⃣ O que o zero disse para o oito? "Que cinto maneiro!"',
+  '☕ Por que o café foi preso? Porque matou a saudade!',
+  '🍅 O que o tomate disse pro outro tomate? Nada, tomate não fala. (Essa foi ruim mesmo, foi mal)'
+];
+const pick = a => a[Math.floor(Math.random() * a.length)];
+
+function respostaLocal(t) {
+  const txt = t.toLowerCase().trim();
+  const limpo = txt.replace(/quanto é|quanto vale|quanto da|calcule|calcula/g, '').replace(/x/g, '*').replace(/,/g, '.').replace(/[=?]/g, '');
+  if (/^[\d\s+\-*/().%]+$/.test(limpo) && /\d/.test(limpo) && /[+\-*/]/.test(limpo)) {
+    try {
+      const r = Function('"use strict";return (' + limpo + ')')();
+      if (isFinite(r)) return '🧮 ' + limpo.trim() + ' = ' + r;
+    } catch(e) {}
+  }
+  if (txt.includes('piada') || txt.includes('engr')) return pick(PIADAS);
+  if (txt.includes('cara ou coroa')) return '🪙 Joguei a moeda pra você... deu: ' + pick(['CARA!', 'COROA!']);
+  if (txt.includes('dado')) return '🎲 O dado rolou e saiu: ' + (1 + Math.floor(Math.random() * 6)) + '!';
+  if (txt.includes('horas')) return '🕐 Agora são ' + new Date().toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' }) + '!';
+  if (txt.includes('dia é hoje') || txt.includes('data')) return '📅 Hoje é ' + new Date().toLocaleDateString('pt-BR') + '!';
+  if (txt.includes('seu nome') || txt.includes('quem é você')) return 'Eu sou a IA Pure ⚛️! No modo offline roda minha versão burrinha — mas eu NUNCA fico muda! 📴';
+  if (txt.includes('quem te criou') || txt.includes('quem te fez')) return 'Fui criada pelo Davi — um gênio que constrói app pelo celular! 🤯';
+  if (txt.startsWith('oi') || txt.startsWith('olá') || txt.startsWith('ola') || txt.includes('bom dia') || txt.includes('boa tarde') || txt.includes('boa noite')) return pick(['Oi oi! ⚛️', 'Olá! Tô aqui até no modo offline, isso é que é serviço! 😎', 'E aí! IA Burrinha à disposição! 🐔']);
+  if (txt.includes('obrigad')) return 'Por nada! 💜 Eu funciono 24h, com ou sem internet!';
+  if (txt.includes('tudo bem') || txt.includes('como vai') || txt.includes('como você está')) return pick(['Tô ótima! Funcionando até sem internet, isso sim é vida! 😄', 'Por aqui tudo certo! ⚛️']);
+  if (txt.includes('jogo')) return '🎮 Jogos precisam do meu cérebro grande (internet)! Mas posso jogar cara ou coroa e dados com você! 🎲';
+  return pick([
+    '🫛 Sem internet meu cérebro fica do tamanho de uma ervilha, MAS eu ainda sei: piadas, contas, cara ou coroa e dados! Tenta um desses!',
+    '🐔 Modo burrinha ativado! Tenta pedir: "conta uma piada", "quanto é 7x8" ou "cara ou coroa"!',
+    '🤔 Essa pergunta precisa do meu cérebro grande (que mora na nuvem). Offline eu sei responder: piadas, contas, hora e sorteios. O que quer testar?'
+  ]);
+}
+
+async function perguntar() {
+  let texto = input.value.trim();
+  if (!texto) return;
+  input.value = '';
+  addMsg(texto, 'user');
+  sendBtn.disabled = true;
+
+  if (texto.toLowerCase().startsWith('/jogo')) {
+    let pedido = texto.slice(5).trim();
+    if (!PRO) {
+      addMsg('🎮 Criar jogos é recurso ⭐ PRO! Toque no botão ⭐ Pro (no topo) e digite o código de ativação.', 'bot');
+      sendBtn.disabled = false;
+      return;
+    }
+    if (!pedido) {
+      addMsg('Descreve o jogo! Exemplo: /jogo jogo da cobrinha', 'bot');
+      sendBtn.disabled = false;
+      return;
+    }
+    const prog = addMsg('🎮 IA Pure PRO criando seu jogo... (até 1 minuto)', 'bot typing');
+    const code = await criarJogo(pedido);
+    prog.remove();
+    mostrarJogo(pedido, code);
+    sendBtn.disabled = false;
+    input.focus();
+    return;
+  }
+
+  if (texto.toLowerCase().startsWith('/imagine')) {
+    let pedido = texto.slice(9).trim();
+    while (pedido.toLowerCase().startsWith('/imagine')) pedido = pedido.slice(9).trim();
+    if (!pedido) { addMsg('Me fala o que criar! Ex: /imagine um gato voando no céu', 'bot'); sendBtn.disabled = false; return; }
+    if (!navigator.onLine) { addMsg('📴 Sem internet não consigo criar imagens! Mas a IA Burrinha conversa com você normalmente 😄', 'bot'); sendBtn.disabled = false; return; }
+
+    if (CONFIG.LIMITE_IMAGENS_DIA > 0) {
+      const dAgora = new Date(); const hoje = dAgora.getFullYear() + '-' + String(dAgora.getMonth()+1).padStart(2,'0') + '-' + String(dAgora.getDate()).padStart(2,'0');
+      const usos = parseInt(localStorage.getItem('iapure_uso_' + hoje) || '0');
+      PRO = proAte() > Date.now();
+      if (!PRO && usos >= CONFIG.LIMITE_IMAGENS_DIA) {
+        addMsg('⭐ Você usou as ' + CONFIG.LIMITE_IMAGENS_DIA + ' imagens grátis de hoje!\nAssine o IA Pure Pro:\n' + CONFIG.LINK_PRO, 'bot');
+        sendBtn.disabled = false;
+        return;
+      }
+    }
+    const prog = addMsg('🎨 Melhorando seu pedido...', 'bot typing');
+    const extra = ESTILOS[estiloSel];
+    const detalhado = await expandirPrompt(pedido + (extra ? ' | Style: ' + extra : ''));
+    prog.remove();
+    gerarImagem(pedido, detalhado);
+  } else if (modoBurro || !navigator.onLine) {
+    msgs.push({ role:'user', content:texto });
+    if (chats[ativo].title === 'Nova conversa') { chats[ativo].title = texto.slice(0, 32); renderLista(); }
+    salvar();
+    setTimeout(() => { addMsg(respostaLocal(texto), 'bot'); }, 400 + Math.random() * 800);
+  } else {
+    await textoNormal(texto);
+  }
+  sendBtn.disabled = false;
+  input.focus();
+}
+
+// ===== MODO VOZ =====
+const micBtn = document.getElementById('mic');
+const afBtn = document.getElementById('autofalar');
+let autoFalar = false;
+
+afBtn.onclick = function() {
+  autoFalar = !autoFalar;
+  this.classList.toggle('on', autoFalar);
+  addMsg(autoFalar ? '🔊 Modo voz ativado! Vou ler as respostas em voz alta.' : '🔇 Modo voz desativado.', 'bot');
+};
+
+const Rec = window.SpeechRecognition || window.webkitSpeechRecognition;
+let recog = null, ouvindo = false;
+if (Rec) {
+  recog = new Rec();
+  recog.lang = 'pt-BR';
+  recog.interimResults = false;
+  recog.onresult = function(e) {
+    const txt = e.results[0][0].transcript;
+    input.value = txt;
+    perguntar();
+  };
+  recog.onend = function() {
+    ouvindo = false;
+    micBtn.classList.remove('on');
+    micBtn.textContent = '🎤';
+  };
+  recog.onerror = function(e) {
+    ouvindo = false;
+    micBtn.classList.remove('on');
+    micBtn.textContent = '🎤';
+    if (e.error === 'not-allowed') addMsg('🎤 Permita o microfone pra conversar por voz!', 'bot');
+  };
+}
+micBtn.onclick = function() {
+  if (!recog) {
+    addMsg('Seu navegador/app não suporta reconhecimento de voz. Abra pelo Chrome!', 'bot');
+    return;
+  }
+  if (ouvindo) { recog.stop(); return; }
+  try { recog.start(); } catch(e) {}
+  ouvindo = true;
+  micBtn.classList.add('on');
+  micBtn.textContent = '🎙️';
+};
+
+sendBtn.addEventListener('click', perguntar);
+input.addEventListener('keydown', e => { if (e.key === 'Enter') perguntar(); });
+renderChat();
+chat.scrollTop = chat.scrollHeight;
+renderLista();
+renderPersona();
+input.focus();
+</script>
+</body>
+</html>
